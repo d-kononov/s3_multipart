@@ -53,7 +53,9 @@ module S3Multipart
         begin
           response = Upload.complete(params)
           upload = Upload.find_by_upload_id(params[:upload_id])
-          upload.update_attributes(location: response[:location])
+          if response.present?
+            upload.update_attributes(location: response[:location])
+          end  
           complete_response = upload.execute_callback(:complete, session)
           response[:extra_data] = complete_response if complete_response.is_a?(Hash)
         rescue => e
