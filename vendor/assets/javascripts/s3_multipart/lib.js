@@ -363,10 +363,10 @@ function Upload(file, o, key) {
       pipes = 10;
     } else if (this.size > 1000000000) { // size greater than 1gb
       console.info('size greater than 1gb')
-      num_segs = 200;
+      num_segs = 160;
       pipes = 7;
     } else if (this.size > 500000000) { // greater than 500mb
-      num_segs = 100;
+      num_segs = 80;
       pipes = 5;
       console.info('size greater than 500mb')
     } else if (this.size > 100000000) { // greater than 100 mb
