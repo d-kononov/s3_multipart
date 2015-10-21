@@ -52,7 +52,10 @@ module S3Multipart
       begin
         return { location: parsed_response_body["Location"][0] }
       rescue NoMethodError
-        return { error: "Upload does not exist"} if parsed_response_body["Message"].first.match("The specified upload does not exist. The upload ID may be invalid, or the upload may have been aborted or completed.")
+        message = 'Unexpected error'
+        message = parsed_response_body["Message"].first
+        message =   "Upload does not exist" if parsed_response_body["Message"].first.match("The specified upload does not exist. The upload ID may be invalid, or the upload may have been aborted or completed.")
+        return { error: message }
       end
     end
 
