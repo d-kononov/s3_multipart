@@ -57,16 +57,18 @@ module S3Multipart
             upload.update_attributes(location: response[:location])
           end  
           complete_response = upload.execute_callback(:complete, session)
-          response[:extra_data] = complete_response if response.present? && complete_response.is_a?(Hash)
+          response ||= {}
+          response[:extra_data] = complete_response if complete_response.is_a?(Hash)
           complete_response
         rescue => e
           logger.error "EXC: #{e.message}"
           airbrake(e, params)
-          response = {error: t("s3_multipart.errors.complete")}
+          response = {error: t("s3_multipart.errors.complete"), upload_id: params[:upload_id]}
         ensure
           render :json => response
         end
       end
+
 
       def airbrake(e, params)
         Airbrake.notify_or_ignore(

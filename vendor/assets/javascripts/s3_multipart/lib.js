@@ -217,11 +217,15 @@ S3MP.prototype.deliverRequest = function(xhr, body, cb) {
   
   xhr.onload = function() {
     response = JSON.parse(this.responseText);
-    if (response.error) { 
+    if (response.error) {
+      if (self.onResponseError) {
+        var uploadObj = _.find(self.uploadList, { 'upload_id': response.upload_id })
+        self.onResponseError(uploadObj)
+      }
       return self.onError({
         name: "ServerResponse",
         message: response.error
-      });  
+      });
     }
     cb(response);
   };
