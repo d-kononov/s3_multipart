@@ -198,16 +198,26 @@ S3MP.prototype.signPartRequest = function(id, object_name, upload_id, part, cb) 
 
 S3MP.prototype.completeMultipart = function(uploadObj, cb) {
   var url, body, xhr;
+  var attempts_remaining = 4;
 
-  url = '/s3_multipart/uploads/'+uploadObj.id;
-  body = JSON.stringify({ object_name    : uploadObj.object_name,
-                          upload_id      : uploadObj.upload_id,
-                          content_length : uploadObj.size,
-                          parts          : uploadObj.Etags
-                        });
+  while(true) {
+    try {
+      url = '/s3_multipart/uploads/'+uploadObj.id;
+      body = JSON.stringify({ object_name    : uploadObj.object_name,
+                              upload_id      : uploadObj.upload_id,
+                              content_length : uploadObj.size,
+                              parts          : uploadObj.Etags
+                            });
 
-  xhr = this.createXhrRequest('PUT', url);
-  this.deliverRequest(xhr, body, cb);
+      xhr = this.createXhrRequest('PUT', url);
+      this.deliverRequest(xhr, body, cb);
+      return;
+    } catch (e) {
+      // handle exception
+      console.log('Exception while completing: ', e);
+      if (--attempts_remaining < 1) throw e;
+    }
+  }
 };
 
 // Specify callbacks, request body, and settings for requests that contact
@@ -362,8 +372,13 @@ function Upload(file, o, key) {
 
     // Break the file into an appropriate amount of chunks
     // This needs to be optimized for various browsers types/versions
-    if (this.size > 2000000000) { // size greater than 2gb
-      num_segs = 200;
+    if (this.size > 4000000000) { // size greater than 4gb
+      console.info('size greater than 4gb')
+      num_segs = 350;
+      pipes = 12;
+    } else if (this.size > 2000000000) { // size greater than 2gb
+      console.info('size greater than 2gb')
+      num_segs = 250;
       pipes = 10;
     } else if (this.size > 1000000000) { // size greater than 1gb
       console.info('size greater than 1gb')
@@ -443,12 +458,16 @@ function UploadPart(blob, key, upload) {
   this.xhr = xhr = upload.createXhrRequest();
   xhr.onload = function() {
     if (part.xhr.getResponseHeader("ETag") === null) {
+      console.log('error response Etag null',response);
+      console.log('onError part Etag null',part);
       upload.handler.onError(upload, part);
     } else {
       upload.handler.onPartSuccess(upload, part);
     }
   };
-  xhr.onerror = function() {
+  xhr.onerror = function(response) {
+    console.log('error response',response);
+    console.log('onError part',part);
     upload.handler.onError(upload, part);
   };
   xhr.upload.onprogress = _.throttle(function(e) {
