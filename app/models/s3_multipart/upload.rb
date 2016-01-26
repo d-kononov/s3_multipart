@@ -39,7 +39,7 @@ module S3Multipart
       end
 
       def validate_file_type
-        ext = self.name.match(/\.([a-zA-Z0-9]+)$/)[1]
+        ext = self.name.match(/\.([a-zA-Z0-9]+)$/)[1].downcase
         types = deserialize(self.uploader).file_types
 
         unless types.blank? || types.include?(ext)
