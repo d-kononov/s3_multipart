@@ -5,7 +5,7 @@ function S3MP(options) {
     , S3MP = this;
 
   _.extend(this, options);
-  this.headers = _.object(_.map(options.headers, function(v,k) { return ["x-amz-" + k.toLowerCase(), v] }));
+  this.headers = _.fromPairs(_.map(options.headers, function(v,k) { return ["x-amz-" + k.toLowerCase(), v] }));
 
   this.uploadList = [];
 
