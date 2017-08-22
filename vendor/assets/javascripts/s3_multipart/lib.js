@@ -346,9 +346,10 @@ S3MP.prototype.resume = function(key) {
 // Upload constructor
 function Upload(file, o, key) {
   function Upload() {
-    var upload, id, parts, part, segs, chunk_segs, chunk_lens, pipes, blob;
+    var upload, id, parts, part, segs, chunk_segs, chunk_lens, pipes, blob, chunkSize;
     
     upload = this;
+    chunkSize = 5242880;
     
     this.key = key;
     this.file = file;
@@ -362,30 +363,30 @@ function Upload(file, o, key) {
 
     // Break the file into an appropriate amount of chunks
     // This needs to be optimized for various browsers types/versions
-    if (this.size > 4000000000) { // size greater than 4gb
+    if (this.size > 800 * chunkSize) { // size greater than 4gb
       console.info('size greater than 4gb')
-      num_segs = 350;
-      pipes = 12;
-    } else if (this.size > 2000000000) { // size greater than 2gb
+      num_segs = 800;
+      pipes = 20;
+    } else if (this.size > 400 * chunkSize) { // size greater than 2gb
       console.info('size greater than 2gb')
-      num_segs = 250;
-      pipes = 10;
-    } else if (this.size > 1000000000) { // size greater than 1gb
+      num_segs = 400;
+      pipes = 15;
+    } else if (this.size > 200 * chunkSize) { // size greater than 1gb
       console.info('size greater than 1gb')
-      num_segs = 160;
+      num_segs = 200;
+      pipes = 20;
+    } else if (this.size > 100 * chunkSize) { // greater than 500mb
+      num_segs = 100;
       pipes = 7;
-    } else if (this.size > 500000000) { // greater than 500mb
-      num_segs = 80;
-      pipes = 5;
       console.info('size greater than 500mb')
-    } else if (this.size > 100000000) { // greater than 100 mb
-      num_segs = 16;
+    } else if (this.size > 20 * chunkSize) { // greater than 100 mb
+      num_segs = 20;
       pipes = 5;
-    } else if (this.size > 50000000) { // greater than 50 mb
-      num_segs = 5;
+    } else if (this.size > 10 * chunkSize) { // greater than 50 mb
+      num_segs = 10;
       pipes = 2;
-    } else if (this.size > 10000000) { // greater than 10 mb
-      num_segs = 1;
+    } else if (this.size > 2 * chunkSize) { // greater than 10 mb
+      num_segs = 2;
       pipes = 1;
     } else { // greater than 5 mb (S3 does not allow multipart uploads < 5 mb)
       num_segs = 1;
