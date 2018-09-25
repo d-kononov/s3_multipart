@@ -4,6 +4,8 @@ module S3Multipart
     def create
       begin
         p 1
+        p params
+        p upload_params
         upload = Upload.create(params)
         p 2
         upload.execute_callback(:begin, session)
@@ -27,6 +29,17 @@ module S3Multipart
     end
 
     private
+
+      def upload_params
+        params.permit(
+          :id, :content_lengths, :content_length, :upload_id,
+          :uploader, :content_size, :context,
+          :content_type, :object_name, :part_number, :verb, :url,
+          headers: {},
+          upload: [:uploader, :upload_id],
+          parts: [:ETag, :partNum]
+        )
+      end
 
       def sign_batch
         begin
