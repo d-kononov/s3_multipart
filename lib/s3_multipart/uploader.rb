@@ -17,6 +17,7 @@ module S3Multipart
     end
 
     def self.deserialize(digest)
+      p 1234
       controllers.key(digest).to_s.constantize
     end
 

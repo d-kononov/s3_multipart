@@ -5,6 +5,7 @@ module S3Multipart
   module TransferHelpers
 
     def initiate(options)
+      p 111
       url = "/#{unique_name(options)}?uploads"
       p 222
       headers = {content_type: options[:content_type]}
@@ -69,17 +70,20 @@ module S3Multipart
     end
 
     def unique_name(options)
+      p 1111
       controller = S3Multipart::Uploader.deserialize(options[:uploader])
+      p 2222
       url = [controller.model.to_s.pluralize, UUID.generate, options[:object_name]].join("/")
-
+      p 3333
       if controller.mount_point && defined?(CarrierWaveDirect)
+        p 33331
         uploader = controller.model.to_s.classify.constantize.new.send(controller.mount_point)
-
+        p 33332
         if uploader.class.ancestors.include?(CarrierWaveDirect::Uploader)
           url = uploader.key.sub(/#{Regexp.escape(CarrierWaveDirect::Uploader::FILENAME_WILDCARD)}\z/, options[:object_name])
         end
       end
-
+      p 4444
       URI.escape(url)
     end
 
