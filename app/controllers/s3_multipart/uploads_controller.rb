@@ -3,8 +3,11 @@ module S3Multipart
 
     def create
       begin
+        p 1
         upload = Upload.create(params)
+        p 2
         upload.execute_callback(:begin, session)
+        p 3
         response = upload.to_json
       rescue FileTypeError, FileSizeError => e
         response = {error: e.message}
