@@ -6,17 +6,19 @@ module S3Multipart
 
     def initiate(options)
       url = "/#{unique_name(options)}?uploads"
-
+      p 222
       headers = {content_type: options[:content_type]}
+      p 333
       headers.merge!(options[:headers]) if options.key?(:headers)
+      p 444
       headers[:authorization], headers[:date] = sign_request verb: 'POST',
                                                              url: url,
                                                              content_type: options[:content_type],
                                                              headers: options[:headers]
-
+      p 555
       response = Http.post url, headers: headers
       parsed_response_body = XmlSimple.xml_in(response.body)
-
+      p 666
       { "key"  => parsed_response_body["Key"][0],
         "upload_id"   => parsed_response_body["UploadId"][0],
         "name" => options[:object_name] }
