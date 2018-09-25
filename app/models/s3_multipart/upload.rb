@@ -4,7 +4,7 @@ module S3Multipart
     include ActionView::Helpers::NumberHelper
 
     # TODO: remove after upgrading postgresql up to 9.4(hstore will be nested).
-    serialize :context_data, ActiveRecord::Coders::NestedHstore
+    #serialize :context_data, ActiveRecord::Coders::NestedHstore
 
     before_create :validate_file_type, :validate_file_size
 
