@@ -18,6 +18,11 @@ module S3Multipart
 
     def self.deserialize(digest)
       p 1234
+      p digest
+      p controllers.key(digest).to_s
+      p 12345
+      p controllers.key(digest).to_s.constantize
+      p 123456
       controllers.key(digest).to_s.constantize
     end
 
