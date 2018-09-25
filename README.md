@@ -1,10 +1,15 @@
 # S3 Multipart
+[![Gem Version](https://badge.fury.io/rb/s3_multipart.svg)](http://badge.fury.io/rb/s3_multipart)
 
 The S3 Multipart gem brings direct multipart uploading to S3 to Rails. Data is piped from the client straight to Amazon S3 and a server-side callback is run when the upload is complete.
 
 Multipart uploading allows files to be split into many chunks and uploaded in parallel or succession (or both). This can result in dramatically increased upload speeds for the client and allows for the pausing and resuming of uploads. For a more complete overview of multipart uploading as it applies to S3, see the documentation [here](http://docs.amazonwebservices.com/AmazonS3/latest/dev/mpuoverview.html). Read more about the philosophy behind the gem on the Bitcast [blog](http://blog.bitcast.io/post/43001057745/direct-multipart-uploads-to-s3-in-rails).
 
 ## What's New
+
+**0.0.10.6** - See pull request [23](https://github.com/maxgillett/s3_multipart/pull/23) for detailed changes. Changes will be documented in README soon.
+
+**0.0.10.5** - See pull request [16](https://github.com/maxgillett/s3_multipart/pull/16) and [18](https://github.com/maxgillett/s3_multipart/pull/18) for detailed changes. 
 
 **0.0.10.4** - Fixed a race condition that led to incorrect upload progress feedback.
 

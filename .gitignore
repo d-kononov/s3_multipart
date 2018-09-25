@@ -18,3 +18,7 @@ _SpecRunner.html
 
 *.swp
 *.swo
+
+.ruby-version
+.rbenv-gemset
+.rbenv-gemsets

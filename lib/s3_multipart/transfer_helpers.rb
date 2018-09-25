@@ -54,7 +54,10 @@ module S3Multipart
       begin
         return { location: parsed_response_body["Location"][0] }
       rescue NoMethodError
-        return { error: "Upload does not exist"} if parsed_response_body["Message"].first.match("The specified upload does not exist. The upload ID may be invalid, or the upload may have been aborted or completed.")
+        message = 'Unexpected error'
+        message = parsed_response_body["Message"].first
+        message =   "Upload does not exist" if parsed_response_body["Message"].first.match("The specified upload does not exist. The upload ID may be invalid, or the upload may have been aborted or completed.")
+        return { error: message }
       end
     end
 
@@ -64,8 +67,8 @@ module S3Multipart
     end
 
     def unique_name(options)
-      url = [UUID.generate, options[:object_name]].join("/")
       controller = S3Multipart::Uploader.deserialize(options[:uploader])
+      url = [controller.model.to_s.pluralize, UUID.generate, options[:object_name]].join("/")
 
       if controller.mount_point && defined?(CarrierWaveDirect)
         uploader = controller.model.to_s.classify.constantize.new.send(controller.mount_point)

@@ -1,6 +1,6 @@
 module S3Multipart
   class UploadsController < ApplicationController
-  
+
     def create
       begin
         upload = Upload.create(params)
@@ -10,6 +10,7 @@ module S3Multipart
         response = {error: e.message}
       rescue => e
         logger.error "EXC: #{e.message}"
+        airbrake(e, params)
         response = { error: t("s3_multipart.errors.create") }
       ensure
         render :json => response
@@ -20,15 +21,16 @@ module S3Multipart
       return complete_upload if params[:parts]
       return sign_batch if params[:content_lengths]
       return sign_part if params[:content_length]
-    end 
+    end
 
-    private 
+    private
 
       def sign_batch
         begin
           response = Upload.sign_batch(params)
         rescue => e
           logger.error "EXC: #{e.message}"
+          airbrake(e, params)
           response = {error: t("s3_multipart.errors.update")}
         ensure
           render :json => response
@@ -40,6 +42,7 @@ module S3Multipart
           response = Upload.sign_part(params)
         rescue => e
           logger.error "EXC: #{e.message}"
+          airbrake(e, params)
           response = {error: t("s3_multipart.errors.update")}
         ensure
           render :json => response
@@ -50,15 +53,29 @@ module S3Multipart
         begin
           response = Upload.complete(params)
           upload = Upload.find_by_upload_id(params[:upload_id])
-          upload.update_attributes(location: response[:location])
-          upload.execute_callback(:complete, session)
+          if response.present?
+            upload.update_attributes(location: response[:location])
+          end  
+          complete_response = upload.execute_callback(:complete, session)
+          response ||= {}
+          response[:extra_data] = complete_response if complete_response.is_a?(Hash)
+          complete_response
         rescue => e
           logger.error "EXC: #{e.message}"
-          response = {error: t("s3_multipart.errors.complete")}
+          airbrake(e, params)
+          response = {error: t("s3_multipart.errors.complete"), upload_id: params[:upload_id]}
         ensure
           render :json => response
         end
       end
 
+
+      def airbrake(e, params)
+        Airbrake.notify_or_ignore(
+          e,
+          :parameters    => params,
+          :session      => session
+        )
+      end
   end
 end

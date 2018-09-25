@@ -8,6 +8,9 @@ class CreateS3MultipartUploads < ActiveRecord::Migration
       t.string :name
       t.string :uploader
       t.integer :size
+      # additional options useful for constructing associations for the uploaded model
+      t.text :context
+      t.hstore :context_data
 
       t.timestamps
     end
