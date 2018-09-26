@@ -12,6 +12,7 @@ module S3Multipart
 
       headers['x-amz-algorithm'] = 'AWS4-HMAC-SHA256'
       headers['x-amz-expires'] = 8600
+      headers['x-amz-content-sha256'] = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
 
       p 333
       headers.merge!(options[:headers]) if options.key?(:headers)
@@ -113,7 +114,8 @@ module S3Multipart
         # request_parts = [ options[:verb],
         #                #"", # optional content md5
         #                options[:content_type]]
-
+        request_parts << 'bucket-for-income-video-files.s3-eu-west-2.amazonaws.com'
+        request_parts << 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
         headers = options[:headers] || {}
 
         if from_upload_part?(options) && options[:parts].nil?
@@ -138,7 +140,7 @@ module S3Multipart
 
         # AWS <%=ENV[\"AWS_ACCESS_KEY_ID\"]%>:NX3cwwPy4HMsqysjXOy60wo9C+A=
         "AWS4-HMAC-SHA256 Credential=#{Config.instance.s3_access_key}/#{date}/eu-west-2/s3/aws4_request, " +
-        "SignedHeaders=content-type;x-amz-date, Signature=#{signature}"
+        "SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date, Signature=#{signature}"
       end
 
       def signing_key(date)
