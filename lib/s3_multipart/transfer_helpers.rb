@@ -28,10 +28,10 @@ module S3Multipart
       headers['x-amz-date'] = timestamp
       headers[:authorization] = authorization
       p 555
-      response = Http.post url, headers: headers
-      parsed_response_body = XmlSimple.xml_in(response.body)
       p url
       p headers
+      response = Http.post url, headers: headers
+      parsed_response_body = XmlSimple.xml_in(response.body)
       p response
       p response.body
       p 666
