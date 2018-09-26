@@ -139,8 +139,10 @@ module S3Multipart
         signature = OpenSSL::HMAC.hexdigest('sha256', signing_key(timestamp), unsigned_request)
 
         # AWS <%=ENV[\"AWS_ACCESS_KEY_ID\"]%>:NX3cwwPy4HMsqysjXOy60wo9C+A=
-        "AWS4-HMAC-SHA256 Credential=#{Config.instance.s3_access_key}/#{date}/eu-west-2/s3/aws4_request, " +
+        "AWS4-HMAC-SHA256 Credential=#{ENV["AWS_ACCESS_KEY_ID"]}/#{date}/eu-west-2/s3/aws4_request, " +
         "SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date, Signature=#{signature}"
+        # "AWS4-HMAC-SHA256 Credential=#{Config.instance.s3_access_key}/#{date}/eu-west-2/s3/aws4_request, " +
+        # "SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date, Signature=#{signature}"
       end
 
       def signing_key(date)
