@@ -6,7 +6,7 @@ module S3Multipart
         p 1
         p params.to_h
         p upload_params.to_h
-        upload = Upload.create(params)
+        upload = Upload.create(params.to_h)
         p 2
         upload.execute_callback(:begin, session)
         p 3
