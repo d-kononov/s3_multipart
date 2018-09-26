@@ -4,9 +4,9 @@ module S3Multipart
     def create
       begin
         p 1
-        p params.to_h
-        p upload_params.to_h
-        upload = Upload.create(params.to_h)
+        p params
+        p upload_params_to_unsafe_h
+        upload = Upload.create(upload_params_to_unsafe_h)
         p 2
         upload.execute_callback(:begin, session)
         p 3
@@ -29,6 +29,9 @@ module S3Multipart
     end
 
     private
+      def upload_params_to_unsafe_h
+        params.to_unsafe_h
+      end
 
       def upload_params
         params.permit(
@@ -43,7 +46,7 @@ module S3Multipart
 
       def sign_batch
         begin
-          response = Upload.sign_batch(params)
+          response = Upload.sign_batch(upload_params_to_unsafe_h)
         rescue => e
           logger.error "EXC: #{e.message}"
           airbrake(e, params)
@@ -55,7 +58,7 @@ module S3Multipart
 
       def sign_part
         begin
-          response = Upload.sign_part(params)
+          response = Upload.sign_part(upload_params_to_unsafe_h)
         rescue => e
           logger.error "EXC: #{e.message}"
           airbrake(e, params)
@@ -67,7 +70,7 @@ module S3Multipart
 
       def complete_upload
         begin
-          response = Upload.complete(params)
+          response = Upload.complete(upload_params_to_unsafe_h)
           upload = Upload.find_by_upload_id(params[:upload_id])
           if response.present?
             upload.update_attributes(location: response[:location])
