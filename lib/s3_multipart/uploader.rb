@@ -14,8 +14,8 @@ module S3Multipart
 
     def self.serialize(controller)
       p 'serialize'
-      p controller
       p controller.to_s.to_sym
+      p controllers[controller.to_s.to_sym]
       controllers[controller.to_s.to_sym]
     end
 
