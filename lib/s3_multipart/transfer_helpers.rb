@@ -144,7 +144,7 @@ module S3Multipart
       def signing_key(date)
         #AWS Signature Version 4
         kDate    = OpenSSL::HMAC.digest('sha256', 'AWS' + Config.instance.s3_secret_key, date)
-        kRegion  = OpenSSL::HMAC.digest('sha256', kDate, Config.instance.region)
+        kRegion  = OpenSSL::HMAC.digest('sha256', kDate, 'eu-west-2') # todo
         kService = OpenSSL::HMAC.digest('sha256', kRegion, 's3')
         kSigning = OpenSSL::HMAC.digest('sha256', kService, 'aws4_request')
 
