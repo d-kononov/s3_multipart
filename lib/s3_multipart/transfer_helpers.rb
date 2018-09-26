@@ -10,7 +10,7 @@ module S3Multipart
       p 222
       headers = {content_type: options[:content_type]}
 
-      headers['x-amz-algorith'] = 'AWS4-HMAC-SHA256'
+      headers['x-amz-algorithm'] = 'AWS4-HMAC-SHA256'
       headers['x-amz-expires'] = 8600
 
       p 333
