@@ -9,13 +9,24 @@ module S3Multipart
       url = "/#{unique_name(options)}?uploads"
       p 222
       headers = {content_type: options[:content_type]}
+
+      headers['x-amz-algorith'] = 'AWS4-HMAC-SHA256'
+      headers['x-amz-expires'] = 8600
+
       p 333
       headers.merge!(options[:headers]) if options.key?(:headers)
       p 444
-      headers[:authorization], headers[:date] = sign_request verb: 'POST',
-                                                             url: url,
-                                                             content_type: options[:content_type],
-                                                             headers: options[:headers]
+      authorization, timestamp, date = sign_request verb: 'POST',
+                                        url: url,
+                                        content_type: options[:content_type],
+                                        headers: options[:headers]
+      # headers[:authorization], headers[:date] = sign_request verb: 'POST',
+      #                                                        url: url,
+      #                                                        content_type: options[:content_type],
+      #                                                        headers: options[:headers]
+      headers['x-amz-credential'] = "#{Config.instance.s3_access_key}/#{date}/eu-west-2/s3/aws4_request"
+      headers['x-amz-date'] = timestamp
+      headers[:authorization] = authorization
       p 555
       response = Http.post url, headers: headers
       parsed_response_body = XmlSimple.xml_in(response.body)
@@ -69,8 +80,10 @@ module S3Multipart
     end
 
     def sign_request(options)
-      time = Time.now.utc.strftime("%a, %d %b %Y %T %Z")
-      [calculate_authorization_hash(time, options), time]
+      #time = Time.now.utc.strftime("%a, %d %b %Y %T %Z")
+      timestamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
+      date = Time.now.utc.strftime("%Y%m%d")
+      [calculate_authorization_hash(date, timestamp, options), timestamp, date]
     end
 
     def unique_name(options)
@@ -93,11 +106,13 @@ module S3Multipart
 
     private
 
-      def calculate_authorization_hash(time, options)
-        date = String.new(time)
-        request_parts = [ options[:verb],
-                       "", # optional content md5
-                       options[:content_type]]
+      def calculate_authorization_hash(date, timestamp, options)
+        #date = Time.now.utc.strftime("%Y%m%d")
+        #date = String.new(timestamp)
+        request_parts = [options[:content_type]]
+        # request_parts = [ options[:verb],
+        #                #"", # optional content md5
+        #                options[:content_type]]
 
         headers = options[:headers] || {}
 
@@ -108,16 +123,32 @@ module S3Multipart
           request_parts << date
         end
 
-        if headers.present?
-          canonicalized_headers = headers.keys.sort.inject([]) {|array,k| array.push "#{k}:#{headers[k]}"}.join("\n")
-          request_parts << canonicalized_headers
-        end
+        # if headers.present?
+        #   canonicalized_headers = headers.keys.sort.inject([]) {|array,k| array.push "#{k}:#{headers[k]}"}.join("\n")
+        #   request_parts << canonicalized_headers
+        # end
 
-        request_parts << "/#{Config.instance.bucket_name}#{options[:url]}"
+        # request_parts << "/#{Config.instance.bucket_name}#{options[:url]}"
         unsigned_request = request_parts.join("\n")
-        signature = Base64.strict_encode64(OpenSSL::HMAC.digest('sha1', Config.instance.s3_secret_key, unsigned_request))
 
-        authorization = "AWS" + " " + Config.instance.s3_access_key + ":" + signature
+        p 'headers:'
+        p unsigned_request
+        # signature = Base64.strict_encode64(OpenSSL::HMAC.digest('sha1', Config.instance.s3_secret_key, unsigned_request))
+        signature = OpenSSL::HMAC.hexdigest('sha256', signing_key(timestamp), unsigned_request)
+
+        # AWS <%=ENV[\"AWS_ACCESS_KEY_ID\"]%>:NX3cwwPy4HMsqysjXOy60wo9C+A=
+        "AWS4-HMAC-SHA256 Credential=#{Config.instance.s3_access_key}/#{date}/eu-west-2/s3/aws4_request, " +
+        "SignedHeaders=content-type;x-amz-date, Signature=#{signature}"
+      end
+
+      def signing_key(date)
+        #AWS Signature Version 4
+        kDate    = OpenSSL::HMAC.digest('sha256', 'AWS' + Config.instance.s3_secret_key, date)
+        kRegion  = OpenSSL::HMAC.digest('sha256', kDate, Config.instance.region)
+        kService = OpenSSL::HMAC.digest('sha256', kRegion, 's3')
+        kSigning = OpenSSL::HMAC.digest('sha256', kService, 'aws4_request')
+
+        kSigning
       end
 
       def from_upload_part?(options)

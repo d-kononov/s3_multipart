@@ -3,3 +3,4 @@ development:
   secret_access_key: ""
   bucket: ""
   revision: "#.#.#.#"
+  region: ""
