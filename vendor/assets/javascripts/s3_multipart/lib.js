@@ -165,7 +165,7 @@ S3MP.prototype.initiateMultipart = function(upload, cb) {
                           headers      : this.headers,
                           context      : $(this.fileInputElement).data("context"),
                           base_path    : $(this.fileInputElement).data("base-path"),
-                          uploader     : $("#s3_multipart_uploader").val()
+                          uploader     : $(this.fileInputElement).data("uploader")
                         });
 
   xhr = this.createXhrRequest('POST', url);
