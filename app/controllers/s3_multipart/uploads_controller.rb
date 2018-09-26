@@ -4,8 +4,8 @@ module S3Multipart
     def create
       begin
         p 1
-        p params
-        p upload_params
+        p params.to_h
+        p upload_params.to_h
         upload = Upload.create(params)
         p 2
         upload.execute_callback(:begin, session)
