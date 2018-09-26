@@ -31,7 +31,7 @@ module S3Multipart
     private
       def upload_params_to_unsafe_h
         params.to_unsafe_h
-        params[:uploader] = 'VideosUploader'
+        params[:uploader] = S3Multipart::Uploader.serialize('VideosUploader')
       end
 
       def upload_params
