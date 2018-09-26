@@ -17,6 +17,7 @@ if defined?(Rails)
         begin
           uploaders = Dir.entries(Rails.root.join('app', 'uploaders', 'multipart').to_s).keep_if {|n| n =~ /uploader\.rb$/}
           uploaders.each do |uploader|
+            require "#{Rails.root.join('app', 'uploaders', 'multipart')}/#{uploader}"
             # require "#{Rails.root.join('app', 'uploaders', 'multipart')}/#{uploader}"
           end
         rescue

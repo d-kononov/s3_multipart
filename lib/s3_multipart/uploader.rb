@@ -39,6 +39,8 @@ module S3Multipart
       attr_accessor :mount_point, :model
 
       def self.extended(klass)
+        p 'EXTENDED'
+        p klass
         Uploader.controllers[klass.to_s.to_sym] = Digest::SHA1.hexdigest(klass.to_s)
       end
 
