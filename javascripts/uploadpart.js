@@ -24,13 +24,19 @@ function UploadPart(blob, key, upload) {
 
 };
 
-UploadPart.prototype.activate = function() { 
-  this.xhr.open('PUT', 'http://'+this.upload.bucket+'.s3.amazonaws.com/'+this.upload.object_name+'?partNumber='+this.num+'&uploadId='+this.upload.upload_id, true);
-  this.xhr.setRequestHeader('x-amz-date', this.date);
-  this.xhr.setRequestHeader('Authorization', this.auth);
+UploadPart.prototype.activate = function() {
+  var upload_part = this;
+  calc_hash(upload_part.blob, function(hash){
+    upload_part.upload.signPartRequest(upload_part.upload.id, upload_part.upload.object_name, upload_part.upload.upload_id, upload_part, hash, function(response) {
+      upload_part.xhr.open('PUT', '//bucket-for-income-video-files.s3-eu-west-2.amazonaws.com/'+upload_part.upload.object_name+'?partNumber='+upload_part.num+'&uploadId='+upload_part.upload.upload_id, true);
+      upload_part.xhr.setRequestHeader('x-amz-date', response.date);
+      upload_part.xhr.setRequestHeader('X-Amz-Content-Sha256', hash);
+      upload_part.xhr.setRequestHeader('Authorization', response.authorization);
 
-  this.xhr.send(this.blob);
-  this.status = "active";
+      upload_part.xhr.send(upload_part.blob);
+      upload_part.status = "active";
+    });
+  });
 };
 
 UploadPart.prototype.pause = function() {

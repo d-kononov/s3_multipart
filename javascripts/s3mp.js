@@ -157,6 +157,7 @@ S3MP.prototype.initiateMultipart = function(upload, cb) {
   body = JSON.stringify({ object_name  : upload.name,
                           content_type : upload.type,
                           content_size : upload.size,
+                          hash         : upload.parts[0].hash,
                           headers      : this.headers,
                           base_path    : $(this.fileInputElement).data("base-path"),
                           context      : $(this.fileInputElement).data("context"),
@@ -168,19 +169,17 @@ S3MP.prototype.initiateMultipart = function(upload, cb) {
 
 };
 
-S3MP.prototype.signPartRequests = function(id, object_name, upload_id, parts, cb) {
+S3MP.prototype.signPartRequest = function(id, object_name, upload_id, part, hash, cb) {
   var content_lengths, url, body, xhr;
 
-  content_lengths = _.reduce(_.rest(parts), function(memo, part) {
-    return memo + "-" + part.size;
-  }, parts[0].size);
-
+  content_length = part.size;
   url = "/s3_multipart/uploads/"+id;
   body = JSON.stringify({ object_name     : object_name,
-                          upload_id       : upload_id,
-                          content_lengths : content_lengths
-                        });
-
+    upload_id       : upload_id,
+    content_length : content_length,
+    hash: hash,
+    part_number : part.num
+  });
   xhr = this.createXhrRequest('PUT', url);
   this.deliverRequest(xhr, body, cb);
 };

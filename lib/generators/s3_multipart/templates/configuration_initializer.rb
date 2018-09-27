@@ -7,4 +7,3 @@ S3Multipart.configure do |config|
   config.s3_secret_key = AWS_Config['secret_access_key']
   config.revision      = AWS_Config['revision']
 end
-

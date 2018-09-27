@@ -5,37 +5,22 @@ module S3Multipart
   module TransferHelpers
 
     def initiate(options)
-      p 111
       url = "/#{unique_name(options)}?uploads"
-      p 222
       headers = {content_type: options[:content_type]}
+      headers['X-Amz-Content-Sha256'] = options[:hash]
 
-      headers['x-amz-algorithm'] = 'AWS4-HMAC-SHA256'
-      headers['x-amz-expires'] = 8600
-      headers['x-amz-content-sha256'] = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
-
-      p 333
       headers.merge!(options[:headers]) if options.key?(:headers)
-      p 444
-      authorization, timestamp, date = sign_request verb: 'POST',
+      authorization, amzdate = sign_request verb: 'POST',
                                         url: url,
+                                        hash: options[:hash],
+                                        host: 'bucket-for-income-video-files.s3-eu-west-2.amazonaws.com',
                                         content_type: options[:content_type],
                                         headers: options[:headers]
-      # headers[:authorization], headers[:date] = sign_request verb: 'POST',
-      #                                                        url: url,
-      #                                                        content_type: options[:content_type],
-      #                                                        headers: options[:headers]
-      headers['x-amz-credential'] = "#{Config.instance.s3_access_key}/#{date}/eu-west-2/s3/aws4_request"
-      headers['x-amz-date'] = timestamp
+
+      headers['X-Amz-Date'] = amzdate
       headers[:authorization] = authorization
-      p 555
-      p url
-      p headers
       response = Http.post url, headers: headers
       parsed_response_body = XmlSimple.xml_in(response.body)
-      p response
-      p response.body
-      p 666
       { "key"  => parsed_response_body["Key"][0],
         "upload_id"   => parsed_response_body["UploadId"][0],
         "name" => options[:object_name] }
@@ -51,7 +36,9 @@ module S3Multipart
 
     def sign_part(options)
       url = "/#{options[:object_name]}?partNumber=#{options[:part_number]}&uploadId=#{options[:upload_id]}"
-      authorization, date = sign_request verb: 'PUT', url: URI.escape(url), content_length: options[:content_length]
+      authorization, date = sign_request verb: 'PUT', host: 'bucket-for-income-video-files.s3-eu-west-2.amazonaws.com',
+                                          hash: options[:hash],
+                                          url: URI.escape(url), content_length: options[:content_length]
 
       { authorization: authorization, date: date, part_nummber: options[:part_number] }
     end
@@ -65,8 +52,16 @@ module S3Multipart
       headers = { content_type: options[:content_type],
                   content_length: options[:content_length] }
 
-      headers[:authorization], headers[:date] = sign_request verb: 'POST', url: url, content_type: options[:content_type]
-
+      if options[:hash].nil?
+        headers['x-amz-content-sha256'] = OpenSSL::Digest::Digest.new("sha256").hexdigest(body)
+      else
+        headers['x-amz-content-sha256'] = options[:hash]
+      end
+      headers[:authorization], amzdate = sign_request verb: 'POST',
+                                                hash: headers['x-amz-content-sha256'],
+                                                host: 'bucket-for-income-video-files.s3-eu-west-2.amazonaws.com',
+                                                url: url, content_type: options[:content_type]
+      headers['X-Amz-Date'] = amzdate
       response = Http.post url, {headers: headers, body: body}
       parsed_response_body = XmlSimple.xml_in(response.body)
 
@@ -81,77 +76,73 @@ module S3Multipart
     end
 
     def sign_request(options)
-      #time = Time.now.utc.strftime("%a, %d %b %Y %T %Z")
-      timestamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
-      date = Time.now.utc.strftime("%Y%m%d")
-      [calculate_authorization_hash(date, timestamp, options), timestamp, date]
+      t = Time.now.utc
+      amzdate = t.strftime('%Y%m%dT%H%M%SZ')
+      datestamp = t.strftime('%Y%m%d')
+      [calculate_authorization_hash(datestamp, amzdate, options), amzdate]
     end
 
     def unique_name(options)
-      p 1111
       controller = S3Multipart::Uploader.deserialize(options[:uploader])
-      p 2222
       url = [controller.model.to_s.pluralize, UUID.generate, options[:object_name]].join("/")
-      p 3333
       if controller.mount_point && defined?(CarrierWaveDirect)
-        p 33331
         uploader = controller.model.to_s.classify.constantize.new.send(controller.mount_point)
-        p 33332
         if uploader.class.ancestors.include?(CarrierWaveDirect::Uploader)
           url = uploader.key.sub(/#{Regexp.escape(CarrierWaveDirect::Uploader::FILENAME_WILDCARD)}\z/, options[:object_name])
         end
       end
-      p 4444
       URI.escape(url)
     end
 
     private
 
-      def calculate_authorization_hash(date, timestamp, options)
-        #date = Time.now.utc.strftime("%Y%m%d")
-        #date = String.new(timestamp)
-        request_parts = [options[:content_type]]
-        # request_parts = [ options[:verb],
-        #                #"", # optional content md5
-        #                options[:content_type]]
-        request_parts << 'bucket-for-income-video-files.s3-eu-west-2.amazonaws.com'
-        request_parts << 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
-        headers = options[:headers] || {}
+      def calculate_authorization_hash(datestamp, amzdate, options)
+        access_key = ENV["AWS_ACCESS_KEY_ID"]
+        secret_key = ENV["AWS_SECRET_ACCESS_KEY"] # TODO
 
-        if from_upload_part?(options) && options[:parts].nil?
-          request_parts << "" # skip date as it's present as an x-amz- header
-          headers["x-amz-date"] = date
+        host = options[:host]
+        query = URI::decode_www_form(URI.parse(options[:url]).query).to_h
+        request_parameters = query.collect do |k,v|
+          out = ""
+          if v.kind_of?(Hash)
+            v.each do |kk,vv|
+              out += "#{k}.#{kk}=#{vv}"
+            end
+          else
+            out += "#{k}=#{v}"
+          end
+          out
+        end.join("&")
+
+        signed_headers = 'content-type;host;x-amz-content-sha256;x-amz-date'
+        if options[:hash].nil?
+          payload_hash = OpenSSL::Digest::Digest.new("sha256").hexdigest("")
         else
-          request_parts << date
+          payload_hash = options[:hash]
         end
+        canonical_headers = 'content-type:' + [options[:content_type], 'host:' + host,
+                      "x-amz-content-sha256:#{payload_hash}", 'x-amz-date:' + amzdate].join("\n") + "\n"
 
-        # if headers.present?
-        #   canonicalized_headers = headers.keys.sort.inject([]) {|array,k| array.push "#{k}:#{headers[k]}"}.join("\n")
-        #   request_parts << canonicalized_headers
-        # end
+        canonical_request = [options[:verb], URI.parse(options[:url]).path, request_parameters, canonical_headers,
+                     signed_headers, payload_hash].join("\n")
+        algorithm = 'AWS4-HMAC-SHA256'
+        credential_scope = [datestamp, 'eu-west-2', 's3', 'aws4_request'].join("/")
+        string_to_sign = [
+          algorithm, amzdate, credential_scope,
+          OpenSSL::Digest::Digest.new("sha256").hexdigest(canonical_request)
+        ].join("\n")
 
-        # request_parts << "/#{Config.instance.bucket_name}#{options[:url]}"
-        unsigned_request = request_parts.join("\n")
+        signing_key = getSignatureKey(secret_key, datestamp, 'eu-west-2', 's3')
+        signature = OpenSSL::HMAC.hexdigest('sha256', signing_key, string_to_sign)
 
-        p 'headers:'
-        p unsigned_request
-        # signature = Base64.strict_encode64(OpenSSL::HMAC.digest('sha1', Config.instance.s3_secret_key, unsigned_request))
-        signature = OpenSSL::HMAC.hexdigest('sha256', signing_key(timestamp), unsigned_request)
-
-        # AWS <%=ENV[\"AWS_ACCESS_KEY_ID\"]%>:NX3cwwPy4HMsqysjXOy60wo9C+A=
-        "AWS4-HMAC-SHA256 Credential=#{ENV["AWS_ACCESS_KEY_ID"]}/#{date}/eu-west-2/s3/aws4_request, " +
-        "SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date, Signature=#{signature}"
-        # "AWS4-HMAC-SHA256 Credential=#{Config.instance.s3_access_key}/#{date}/eu-west-2/s3/aws4_request, " +
-        # "SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date, Signature=#{signature}"
+        "#{algorithm} Credential=#{access_key + '/' + credential_scope}, SignedHeaders=#{signed_headers}, Signature=#{signature}"
       end
 
-      def signing_key(date)
-        #AWS Signature Version 4
-        kDate    = OpenSSL::HMAC.digest('sha256', 'AWS' + Config.instance.s3_secret_key, date)
-        kRegion  = OpenSSL::HMAC.digest('sha256', kDate, 'eu-west-2') # todo
-        kService = OpenSSL::HMAC.digest('sha256', kRegion, 's3')
-        kSigning = OpenSSL::HMAC.digest('sha256', kService, 'aws4_request')
-
+      def getSignatureKey(key, dateStamp, regionName, serviceName)
+        kDate    = OpenSSL::HMAC.digest('sha256', "AWS4" + key, dateStamp)
+        kRegion  = OpenSSL::HMAC.digest('sha256', kDate, regionName)
+        kService = OpenSSL::HMAC.digest('sha256', kRegion, serviceName)
+        kSigning = OpenSSL::HMAC.digest('sha256', kService, "aws4_request")
         kSigning
       end
 
