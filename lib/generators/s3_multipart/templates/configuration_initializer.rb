@@ -1,4 +1,4 @@
-AWS_Config = YAML.load_file("config/aws.yml")[Rails.env]
+AWS_Config = YAML.load(ERB.new(File.read("config/aws.yml")).result)[Rails.env]
 
 S3Multipart.configure do |config|
   config.bucket_name   = AWS_Config['bucket']

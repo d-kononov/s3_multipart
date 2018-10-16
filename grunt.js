@@ -10,6 +10,7 @@ module.exports = function(grunt) {
     concat: {
       lib : {
         src : [
+          'javascripts/libs/asmcrypto.min.js',
           'javascripts/header.js',
           'javascripts/s3mp.js',
           'javascripts/upload.js',
@@ -22,6 +23,7 @@ module.exports = function(grunt) {
 
     jasmine : {
       src : [
+        'javascripts/libs/asmcrypto.min.js',
         'javascripts/libs/underscore.js',
         'javascripts/s3mp.js',
         'javascripts/upload.js',

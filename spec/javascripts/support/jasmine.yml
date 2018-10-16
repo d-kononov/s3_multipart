@@ -18,6 +18,7 @@
 #   - dist/**/*.js
 #
 src_files:
+    - libs/asmcrypto.min.js
     - s3mp.js  
     - upload.js  
     - uploadpart.js  

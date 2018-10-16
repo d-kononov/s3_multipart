@@ -13,7 +13,7 @@ module S3Multipart
       authorization, amzdate = sign_request verb: 'POST',
                                         url: url,
                                         hash: options[:hash],
-                                        host: 'bucket-for-income-video-files.s3-eu-west-2.amazonaws.com',
+                                        host: get_host(),
                                         content_type: options[:content_type],
                                         headers: options[:headers]
 
@@ -36,11 +36,11 @@ module S3Multipart
 
     def sign_part(options)
       url = "/#{options[:object_name]}?partNumber=#{options[:part_number]}&uploadId=#{options[:upload_id]}"
-      authorization, date = sign_request verb: 'PUT', host: 'bucket-for-income-video-files.s3-eu-west-2.amazonaws.com',
+      authorization, date = sign_request verb: 'PUT', host: get_host(),
                                           hash: options[:hash],
                                           url: URI.escape(url), content_length: options[:content_length]
 
-      { authorization: authorization, date: date, part_nummber: options[:part_number] }
+      { authorization: authorization, date: date, part_nummber: options[:part_number], host: get_host() }
     end
 
     def complete(options)
@@ -59,7 +59,7 @@ module S3Multipart
       end
       headers[:authorization], amzdate = sign_request verb: 'POST',
                                                 hash: headers['x-amz-content-sha256'],
-                                                host: 'bucket-for-income-video-files.s3-eu-west-2.amazonaws.com',
+                                                host: get_host(),
                                                 url: url, content_type: options[:content_type]
       headers['X-Amz-Date'] = amzdate
       response = Http.post url, {headers: headers, body: body}
@@ -97,9 +97,8 @@ module S3Multipart
     private
 
       def calculate_authorization_hash(datestamp, amzdate, options)
-        access_key = ENV["AWS_ACCESS_KEY_ID"]
-        secret_key = ENV["AWS_SECRET_ACCESS_KEY"] # TODO
-
+        access_key = Config.instance.s3_access_key
+        secret_key = Config.instance.s3_secret_key
         host = options[:host]
         query = URI::decode_www_form(URI.parse(options[:url]).query).to_h
         request_parameters = query.collect do |k,v|
@@ -126,13 +125,13 @@ module S3Multipart
         canonical_request = [options[:verb], URI.parse(options[:url]).path, request_parameters, canonical_headers,
                      signed_headers, payload_hash].join("\n")
         algorithm = 'AWS4-HMAC-SHA256'
-        credential_scope = [datestamp, 'eu-west-2', 's3', 'aws4_request'].join("/")
+        credential_scope = [datestamp, Config.instance.region, 's3', 'aws4_request'].join("/")
         string_to_sign = [
           algorithm, amzdate, credential_scope,
           OpenSSL::Digest::Digest.new("sha256").hexdigest(canonical_request)
         ].join("\n")
 
-        signing_key = getSignatureKey(secret_key, datestamp, 'eu-west-2', 's3')
+        signing_key = getSignatureKey(secret_key, datestamp, Config.instance.region, 's3')
         signature = OpenSSL::HMAC.hexdigest('sha256', signing_key, string_to_sign)
 
         "#{algorithm} Credential=#{access_key + '/' + credential_scope}, SignedHeaders=#{signed_headers}, Signature=#{signature}"
@@ -160,6 +159,8 @@ module S3Multipart
         XmlSimple.xml_out(hash, { :RootName => "CompleteMultipartUpload", :AttrPrefix => true })
       end
 
+      def get_host()
+        "#{Config.instance.bucket_name}.s3-#{Config.instance.region}.amazonaws.com"
+      end
     end
-
 end
